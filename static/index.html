@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royal Trading Company</title>
+<meta name="robots" content="noindex, nofollow">
+<script>
+  // Apply the saved theme before first paint so there's no flash.
+  (function () {
+    let t = null;
+    try { t = localStorage.getItem('hk_theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+  /* ---------- theme tokens: minimalist white / pitch-black AMOLED ---------- */
+  :root, :root[data-theme="dark"] {           /* AMOLED: pure black, gold accent */
+    color-scheme: dark;
+    --bg: #000;
+    --ink: #f5f5f5;
+    --mute: #8c8c8c;
+    --line: #161616;
+    --glass: #000;
+    --glass-hover: #0d0d0d;
+    --glass-strong: rgba(0,0,0,.94);
+    --menu: #0a0a0a;
+    --field: #0a0a0a;
+    --border: #1f1f1f;
+    --border-hi: #2c2c2c;
+    --shadow: none;
+    --acc: #d4af37;
+    --acc-ink: #000;
+    --acc-soft: rgba(212,175,55,.12);
+    --good: #4ade80; --good-soft: rgba(74,222,128,.10);
+    --bad: #ff5c5c;  --bad-soft: rgba(255,92,92,.10);
+    --blob1: transparent; --blob2: transparent; --blob3: transparent;
+    --img-bg: #fff;
+    --mark: rgba(212,175,55,.25);
+  }
+  :root[data-theme="light"] {                 /* Minimal white, black accent */
+    color-scheme: light;
+    --bg: #fff;
+    --ink: #0a0a0a;
+    --mute: #6b6b6b;
+    --line: #efefef;
+    --glass: #fff;
+    --glass-hover: #f7f7f7;
+    --glass-strong: rgba(255,255,255,.96);
+    --menu: #fff;
+    --field: #fafafa;
+    --border: #e6e6e6;
+    --border-hi: #d9d9d9;
+    --shadow: 0 1px 2px rgba(0,0,0,.04);
+    --acc: #0a0a0a;
+    --acc-ink: #fff;
+    --acc-soft: rgba(10,10,10,.06);
+    --good: #0a7a3d; --good-soft: rgba(10,122,61,.08);
+    --bad: #c62828;  --bad-soft: rgba(198,40,40,.07);
+    --blob1: transparent; --blob2: transparent; --blob3: transparent;
+    --img-bg: #fff;
+    --mark: rgba(184,134,11,.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  /* soft colour glows behind the glass */
+  .backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .backdrop i { position: absolute; border-radius: 50%; filter: blur(90px); }
+  .backdrop i:nth-child(1) { width: 520px; height: 520px; background: var(--blob1); top: -160px; left: -120px; }
+  .backdrop i:nth-child(2) { width: 460px; height: 460px; background: var(--blob2); top: 30%; right: -160px; }
+  .backdrop i:nth-child(3) { width: 420px; height: 420px; background: var(--blob3); bottom: -180px; left: 25%; }
+
+  /* smooth theme switch fallback (when View Transitions aren't available) */
+  html.theming *, html.theming *::before, html.theming *::after {
+    transition: background-color .45s ease, color .45s ease, border-color .45s ease, fill .45s ease, stroke .45s ease, box-shadow .45s ease !important;
+  }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar { max-width: 1140px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 10px; align-items: center; }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: -.01em; cursor: pointer; white-space: nowrap; font-size: 15px; }
+  .logo .dot { width: 30px; height: 30px; border: 1.5px solid #c9a227; color: #c9a227; display: grid; place-items: center; font-size: 10px; font-weight: 800; letter-spacing: .04em; flex: none; }
+  .logo .lname { font-size: 11.5px; letter-spacing: .24em; font-weight: 750; line-height: 1.15; }
+  .backdrop { display: none; }
+  .glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .search-wrap { position: relative; flex: 1; min-width: 0; }
+  form.search { display: flex; align-items: center; gap: 6px; background: var(--field); border: 1px solid var(--border); border-radius: 999px; padding: 4px 4px 4px 14px; transition: border-color .2s, box-shadow .2s; }
+  form.search:focus-within { border-color: var(--acc); box-shadow: 0 0 0 4px var(--acc-soft); }
+  form.search svg { flex: none; color: var(--mute); }
+  form.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); padding: 7px 4px; font: inherit; }
+  form.search button { border-radius: 999px; }
+
+  input, button { font: inherit; }
+  input[type=text], input[type=email], input[type=number], input[type=password] {
+    padding: 9px 12px; border: 1px solid var(--border-hi); border-radius: 12px; width: 100%;
+    background: var(--field); color: var(--ink); outline: 0; transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus { border-color: var(--acc); box-shadow: 0 0 0 4px var(--acc-soft); }
+  ::placeholder { color: var(--mute); opacity: .9; }
+  button {
+    padding: 8px 16px; border: 0; border-radius: 12px; background: var(--acc); color: var(--acc-ink);
+    font-weight: 600; cursor: pointer; white-space: nowrap; transition: transform .15s, filter .15s, background-color .2s;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:active { transform: scale(.97); }
+  button.ghost { background: var(--glass); color: var(--ink); border: 1px solid var(--border-hi); font-weight: 500; }
+  button.ghost:hover { background: var(--glass-hover); filter: none; }
+  button:disabled { opacity: .55; cursor: default; }
+  .icon-btn { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 12px; flex: none; }
+  .icon-btn svg { transition: transform .5s cubic-bezier(.4,1.6,.5,1), opacity .3s; }
+  .icon-btn .sun, .icon-btn .moon { grid-area: 1 / 1; }
+  [data-theme="dark"] .icon-btn .sun { transform: rotate(-90deg) scale(.4); opacity: 0; }
+  [data-theme="light"] .icon-btn .moon { transform: rotate(90deg) scale(.4); opacity: 0; }
+  .tabs button { background: transparent; color: var(--ink); font-weight: 500; }
+  .tabs button:hover { background: var(--glass-hover); }
+  .tabs button.on { color: var(--acc); font-weight: 700; background: var(--acc-soft); }
+
+  /* ---------- suggestions ---------- */
+  .suggest {
+    position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 30;
+    background: var(--menu);
+    -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%);
+    border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow);
+    padding: 6px; max-height: min(70vh, 520px); overflow-y: auto;
+    opacity: 0; transform: translateY(-6px) scale(.985); transform-origin: top center; pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .suggest.open { opacity: 1; transform: none; pointer-events: auto; }
+  .sg-head { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); padding: 8px 10px 4px; display: flex; justify-content: space-between; }
+  .sg-head button { all: unset; cursor: pointer; color: var(--mute); font-size: 11px; }
+  .sg-head button:hover { color: var(--acc); }
+  .sg { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; cursor: pointer; }
+  .sg.active, .sg:hover { background: var(--glass-hover); }
+  .sg.active { box-shadow: inset 0 0 0 1px var(--border-hi); }
+  .sg .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--mute); background: var(--field); flex: none; }
+  .sg .thumb { width: 42px; height: 42px; border-radius: 10px; background: var(--img-bg); object-fit: contain; padding: 3px; flex: none; }
+  .sg .txt { flex: 1; min-width: 0; }
+  .sg .t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sg .t2 { font-size: 12px; color: var(--mute); display: flex; gap: 6px; align-items: center; }
+  .sg .t2 img { width: 14px; height: 14px; border-radius: 50%; }
+  .sg .pr { font-weight: 700; white-space: nowrap; }
+  .sg .x { all: unset; color: var(--mute); padding: 2px 6px; border-radius: 6px; cursor: pointer; }
+  .sg .x:hover { color: var(--bad); background: var(--bad-soft); }
+  .sg mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .sg-empty { padding: 14px 10px; color: var(--mute); font-size: 13px; }
+  .sg-foot { font-size: 11px; color: var(--mute); padding: 6px 10px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
+  .sg-foot kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--border-hi); border-radius: 4px; padding: 0 4px; }
+
+  /* ---------- layout & cards ---------- */
+  main { max-width: 1140px; margin: 0 auto; padding: 20px 16px 48px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .card { padding: 14px; }
+  .prod { cursor: pointer; display: flex; flex-direction: column; gap: 8px; transition: transform .2s ease, border-color .2s, background-color .2s; animation: rise .35s ease both; }
+  .prod:hover { transform: translateY(-3px); border-color: var(--acc); background: var(--glass-hover); }
+  .imgbox { background: var(--img-bg); border-radius: 12px; padding: 8px; display: grid; place-items: center; }
+  .prod .imgbox { height: 150px; }
+  .prod img.main { max-height: 134px; max-width: 100%; object-fit: contain; }
+  .name { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 39px; }
+  .price { font-weight: 750; font-size: 16px; }
+  .mrp { color: var(--mute); text-decoration: line-through; font-size: 12px; margin-left: 6px; font-weight: 400; }
+  .off { color: var(--good); font-size: 12px; font-weight: 600; margin-left: 6px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .site { width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .mute { color: var(--mute); font-size: 12px; }
+  .detail { display: grid; grid-template-columns: 280px 1fr; gap: 22px; }
+  .detail .imgbox { padding: 16px; min-height: 260px; }
+  .detail img.hero { width: 100%; max-height: 300px; object-fit: contain; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .stat { background: var(--field); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 16px; }
+  .verdict { padding: 9px 14px; border-radius: 12px; font-weight: 600; margin: 10px 0; border: 1px solid transparent; }
+  .verdict.good { background: var(--good-soft); color: var(--good); border-color: color-mix(in srgb, var(--good) 25%, transparent); }
+  .verdict.bad { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 25%, transparent); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; color: var(--mute); font-weight: 500; }
+  a { color: var(--acc); }
+  h2 { font-size: 19px; margin: 4px 0 12px; letter-spacing: -.01em; }
+  h3 { font-size: 15px; margin: 0 0 10px; }
+  .section { margin-top: 14px; }
+  .coupon { display: inline-flex; gap: 8px; align-items: center; border: 1px dashed var(--acc); background: var(--acc-soft); border-radius: 12px; padding: 6px 10px; margin: 4px; }
+  .coupon code { font-weight: 700; }
+
+  .modal-bg {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s;
+  }
+  .modal-bg.open { opacity: 1; visibility: visible; }
+  .modal { background: var(--glass-strong); padding: 22px; width: min(390px, 92vw); display: flex; flex-direction: column; gap: 10px; transform: scale(.96); transition: transform .2s; }
+  .modal-bg.open .modal { transform: none; }
+  .err { color: var(--bad); font-size: 13px; min-height: 1em; }
+  .msg { padding: 48px 20px; text-align: center; color: var(--mute); }
+  .hero-msg { text-align: center; padding: 64px 20px; }
+  .hero-msg h1 { font-size: clamp(26px, 5vw, 40px); margin: 0 0 10px; letter-spacing: -.02em; }
+  .hero-msg h1 span { background: linear-gradient(90deg, var(--acc), #ffb86b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero-msg p { color: var(--mute); max-width: 520px; margin: 0 auto; }
+  svg text { font-size: 11px; fill: var(--mute); }
+
+  /* skeleton loaders */
+  .skel { position: relative; overflow: hidden; background: var(--field); border-radius: 10px; }
+  .skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--glass-hover), transparent); animation: shimmer 1.2s infinite; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .spin { width: 16px; height: 16px; border: 2px solid var(--border-hi); border-top-color: var(--acc); border-radius: 50%; animation: sp .7s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+
+  @media (max-width: 760px) {
+    .bar { flex-wrap: wrap; gap: 6px; }
+    .tabs button, #authBtn { padding: 8px 10px; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .prod .imgbox { height: 120px; }
+    .prod img.main { max-height: 104px; }
+    .card { padding: 10px; }
+    .search-wrap { order: 9; flex-basis: 100%; }
+    .logo { margin-right: auto; }
+    .detail { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    #authBtn .full { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+<link rel="stylesheet" href="/static/shop.css">
+</head>
+<body>
+<div class="backdrop"><i></i><i></i><i></i></div>
+
+<header><div class="bar">
+  <span class="logo" onclick="go(window.ME && ME.role === 'cashier' ? 'bill' : 'shop')"><span class="dot">RTC</span><span class="lname">ROYAL<br>TRADING CO.</span></span>
+  <div class="search-wrap">
+    <form class="search" onsubmit="event.preventDefault(); onSearch()" autocomplete="off">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="text" placeholder="Search a product, or paste an Amazon / Flipkart / Myntra… link"
+             role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest" spellcheck="false">
+      <button>Search</button>
+    </form>
+    <div class="suggest" id="suggest" role="listbox"></div>
+  </div>
+  <span class="tabs"><button id="tabShop" onclick="go('shop')">Shop</button><button id="tabAlerts" onclick="go('alerts')">My alerts</button></span>
+  <button class="ghost icon-btn" onclick="go('cart')" title="Next shipment" aria-label="Next shipment" style="position:relative">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.6l2.4 12.2h11.2l2-8.4H6.3"/></svg>
+    <span class="badge" id="cartBadge" style="position:absolute;top:-6px;right:-6px;display:none"></span></button>
+  <button id="authBtn" class="ghost" onclick="authClick()" title="Log in to Buyhatke (only needed for price alerts)">Buyhatke</button>
+  <button id="themeBtn" class="ghost icon-btn" onclick="toggleTheme(event)" aria-label="Switch theme" title="Switch theme">
+    <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11Z"/></svg>
+  </button>
+</div></header>
+
+<main id="view"></main>
+
+<div class="modal-bg" id="loginModal">
+  <div class="modal glass">
+    <h2>Log in to Buyhatke</h2>
+    <div class="mute" id="loginWhy">Price alerts need a Buyhatke account.</div>
+    <div id="stepEmail">
+      <input id="email" type="email" placeholder="you@example.com">
+      <div style="height:8px"></div>
+      <button id="sendBtn" onclick="sendOtp()">Send OTP</button>
+    </div>
+    <div id="stepOtp" style="display:none">
+      <div class="mute">Enter the code Buyhatke emailed you.</div>
+      <div style="height:6px"></div>
+      <input id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="OTP">
+      <div style="height:8px"></div>
+      <button id="verifyBtn" onclick="verifyOtp()">Verify</button>
+      <button class="ghost" onclick="showStep('email')">Change email</button>
+    </div>
+    <div class="err" id="loginErr"></div>
+    <button class="ghost" onclick="closeLogin()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const view = $('view');
+const inr = n => n == null ? '–' : '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 0});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isUrl = s => /^https?:\/\//i.test(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let me = {logged_in: false};
+let current = null;          // product currently shown
+let afterLogin = null;       // action to retry once logged in
+
+const HOME = `<div class="hero-msg"><h1>Market prices. <span>Know before you price.</span></h1>
+  <p>Search a product or paste an Amazon / Flipkart link to see what it sells for online, then add it to your inventory or customer catalogue.</p></div>`;
+
+// ---- theme: AMOLED (dark) / white, with a circular reveal from the toggle
+function setThemeLabel() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const label = dark ? 'Switch to white theme' : 'Switch to AMOLED theme';
+  $('themeBtn').title = label; $('themeBtn').setAttribute('aria-label', label);
+}
+function toggleTheme(ev) {
+  const root = document.documentElement;
+  const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  const apply = () => { root.dataset.theme = next; try { localStorage.setItem('hk_theme', next); } catch (e) {} setThemeLabel(); };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!document.startViewTransition || reduce) {
+    root.classList.add('theming'); apply();
+    clearTimeout(toggleTheme.t); toggleTheme.t = setTimeout(() => root.classList.remove('theming'), 500);
+    return;
+  }
+  const r = $('themeBtn').getBoundingClientRect();
+  const x = ev && ev.clientX ? ev.clientX : r.left + r.width / 2;
+  const y = ev && ev.clientY ? ev.clientY : r.top + r.height / 2;
+  const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  document.startViewTransition(apply).ready.then(() => {
+    document.documentElement.animate(
+      {clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${end}px at ${x}px ${y}px)`]},
+      {duration: 550, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)'});
+  });
+}
+setThemeLabel();
+
+// ---- API helper: a 401 opens the login dialog and retries the action afterwards
+async function api(path, opts = {}, retry) {
+  const r = await fetch(path, {
+    method: opts.body ? 'POST' : (opts.method || 'GET'),
+    headers: opts.body ? {'Content-Type': 'application/json'} : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && data.error === 'auth') { location.href = '/login' + location.hash; throw new Error('Please log in'); }
+  if (r.status === 401) { openLogin(retry); throw new Error('login_required'); }
+  if (!r.ok) throw new Error(data.detail || data.error || ('HTTP ' + r.status));
+  return data;
+}
+
+// ---- routing (hash-based so back/forward work)
+function go(name, arg) { location.hash = arg ? `${name}:${encodeURIComponent(arg)}` : name; }
+window.addEventListener('hashchange', route);
+function route() {
+  closeSuggest();
+  const [name, ...rest] = location.hash.slice(1).split(':');
+  if (window.shopNav) shopNav(name);
+  const arg = decodeURIComponent(rest.join(':'));
+  $('tabAlerts').classList.toggle('on', name === 'alerts');
+  if (name === 'search') return showSearch(arg);
+  if (name === 'p') return showProduct({path: arg});
+  if (name === 'u') return showProduct({url: arg});
+  if (name === 'alerts') return showAlerts();
+  if (window.shopRoute && window.shopRoute(name, arg)) return;
+  view.innerHTML = HOME;
+}
+
+function onSearch(q = $('q').value.trim()) {
+  if (!q) return;
+  closeSuggest(); $('q').blur();
+  if (isUrl(q)) go('u', q); else go('search', q);
+}
+
+// ---- recent searches (per browser)
+const recents = () => store.get('hk_recent', []);
+function addRecent(q) { store.set('hk_recent', [q, ...recents().filter(x => x.toLowerCase() !== q.toLowerCase())].slice(0, 8)); }
+function removeRecent(q) { store.set('hk_recent', recents().filter(x => x !== q)); }
+
+// ---- search-as-you-type suggestions
+const sg = {el: $('suggest'), rows: [], idx: -1, timer: null, seq: 0, ctrl: null, cache: new Map(), open: false};
+const SVG = {
+  clock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  search: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  link: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+};
+
+function highlight(text, q) {
+  const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 0).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!words.length) return esc(text);
+  const re = new RegExp(`(${words.join('|')})`, 'ig');
+  return String(text ?? '').split(re).map((part, i) => i % 2 ? `<mark>${esc(part)}</mark>` : esc(part)).join('');
+}
+
+function renderSuggest(q, products, state) {
+  const rows = [];
+  let html = '';
+  if (isUrl(q)) {
+    rows.push({kind: 'link', value: q});
+    html += `<div class="sg" data-i="0" role="option"><span class="ic">${SVG.link}</span><div class="txt"><div class="t1">Open this product link</div><div class="t2">${esc(q)}</div></div></div>`;
+  } else {
+    const lq = q.toLowerCase();
+    const rec = recents().filter(r => !lq || (r.toLowerCase().includes(lq) && r.toLowerCase() !== lq)).slice(0, q ? 3 : 6);
+    if (rec.length) {
+      html += `<div class="sg-head"><span>Recent</span>${q ? '' : '<button data-clear>Clear</button>'}</div>`;
+      rec.forEach(r => {
+        const i = rows.push({kind: 'recent', value: r}) - 1;
+        html += `<div class="sg" data-i="${i}" role="option"><span class="ic">${SVG.clock}</span><div class="txt"><div class="t1">${highlight(r, q)}</div></div><button class="x" data-rm="${esc(r)}" title="Remove">✕</button></div>`;
+      });
+    }
+    if (q.length >= 2) {
+      html += `<div class="sg-head"><span>Products</span>${state === 'loading' ? '<span class="spin"></span>' : ''}</div>`;
+      if (products && products.length) {
+        products.forEach(p => {
+          const i = rows.push({kind: 'product', value: p.path}) - 1;
+          html += `<div class="sg" data-i="${i}" role="option">
+            <img class="thumb" src="${esc(p.image)}" alt="" loading="lazy">
+            <div class="txt"><div class="t1">${highlight(p.name, q)}</div>
+              <div class="t2">${p.site_image ? `<img src="${esc(p.site_image)}" alt="">` : ''}${esc(p.brand || '')}</div></div>
+            <span class="pr">${inr(p.price)}</span></div>`;
+        });
+      } else if (state === 'loading') {
+        html += [0, 1, 2].map(() => `<div class="sg" style="cursor:default"><div class="skel" style="width:42px;height:42px"></div><div class="txt"><div class="skel" style="height:12px;width:80%"></div><div class="skel" style="height:10px;width:40%;margin-top:6px"></div></div></div>`).join('');
+      } else if (state === 'error') {
+        html += `<div class="sg-empty">Couldn't load suggestions — press Enter to search.</div>`;
+      } else {
+        html += `<div class="sg-empty">No matching products for “${esc(q)}”.</div>`;
+      }
+    }
+    if (q) {
+      const i = rows.push({kind: 'search', value: q}) - 1;
+      html += `<div class="sg" data-i="${i}" role="option"><span class="ic">${SVG.search}</span><div class="txt"><div class="t1">Search all results for “<b>${esc(q)}</b>”</div></div></div>`;
+    }
+  }
+  if (!rows.length) { closeSuggest(); return; }
+  html += `<div class="sg-foot"><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</div>`;
+  sg.rows = rows;
+  sg.idx = Math.min(sg.idx, rows.length - 1);
+  sg.el.innerHTML = html;
+  paintActive();
+  openSuggest();
+}
+
+function openSuggest() { sg.open = true; sg.el.classList.add('open'); $('q').setAttribute('aria-expanded', 'true'); }
+function closeSuggest() {
+  sg.open = false; sg.idx = -1; clearTimeout(sg.timer); sg.seq++;
+  if (sg.ctrl) { sg.ctrl.abort(); sg.ctrl = null; }
+  sg.el.classList.remove('open'); $('q').setAttribute('aria-expanded', 'false');
+}
+function paintActive() {
+  sg.el.querySelectorAll('.sg[data-i]').forEach(n => n.classList.toggle('active', +n.dataset.i === sg.idx));
+  const a = sg.el.querySelector('.sg.active'); if (a) a.scrollIntoView({block: 'nearest'});
+}
+function pickRow(i) {
+  const r = sg.rows[i]; if (!r) return;
+  if (r.kind === 'product') { closeSuggest(); $('q').blur(); go('p', r.value); }
+  else if (r.kind === 'link') onSearch(r.value);
+  else { $('q').value = r.value; onSearch(r.value); }
+}
+
+function updateSuggest() {
+  const q = $('q').value.trim();
+  const key = q.toLowerCase().replace(/\s+/g, ' ');
+  clearTimeout(sg.timer);
+  if (sg.ctrl) { sg.ctrl.abort(); sg.ctrl = null; }
+  const seq = ++sg.seq;
+  sg.idx = -1;
+  if (q.length < 2 || isUrl(q)) { renderSuggest(q, null, 'idle'); return; }
+  if (sg.cache.has(key)) { renderSuggest(q, sg.cache.get(key), 'done'); return; }
+  renderSuggest(q, null, 'loading');
+  sg.timer = setTimeout(async () => {
+    sg.ctrl = new AbortController();
+    try {
+      const items = await api('/api/suggest?q=' + encodeURIComponent(q), {signal: sg.ctrl.signal});
+      sg.cache.set(key, items);
+      if (seq === sg.seq) renderSuggest(q, items, 'done');
+    } catch (e) {
+      if (e.name !== 'AbortError' && seq === sg.seq) renderSuggest(q, null, 'error');
+    }
+  }, 260);
+}
+
+$('q').addEventListener('input', updateSuggest);
+$('q').addEventListener('focus', updateSuggest);
+$('q').addEventListener('keydown', e => {
+  if (!sg.open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { updateSuggest(); return; }
+  if (!sg.open) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); sg.idx = (sg.idx + 1) % sg.rows.length; paintActive(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); sg.idx = sg.idx <= 0 ? sg.rows.length - 1 : sg.idx - 1; paintActive(); }
+  else if (e.key === 'Enter' && sg.idx >= 0) { e.preventDefault(); pickRow(sg.idx); }
+  else if (e.key === 'Escape') { closeSuggest(); }
+});
+$('q').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('q')) closeSuggest(); }, 120));
+sg.el.addEventListener('mousedown', e => e.preventDefault());   // keep focus in the input
+sg.el.addEventListener('mousemove', e => {
+  const n = e.target.closest('.sg[data-i]'); if (n && +n.dataset.i !== sg.idx) { sg.idx = +n.dataset.i; paintActive(); }
+});
+sg.el.addEventListener('click', e => {
+  const rm = e.target.closest('[data-rm]');
+  if (rm) { removeRecent(rm.dataset.rm); updateSuggest(); return; }
+  if (e.target.closest('[data-clear]')) { store.set('hk_recent', []); updateSuggest(); return; }
+  const n = e.target.closest('.sg[data-i]'); if (n) pickRow(+n.dataset.i);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); $('q').focus(); }
+});
+
+// ---- search results
+const skeletonGrid = n => '<div class="grid">' + Array.from({length: n}, () => `
+  <div class="glass card prod" style="cursor:default"><div class="skel" style="height:150px;border-radius:12px"></div>
+  <div class="skel" style="height:12px;width:90%"></div><div class="skel" style="height:12px;width:60%"></div>
+  <div class="skel" style="height:16px;width:40%"></div></div>`).join('') + '</div>';
+
+async function showSearch(q) {
+  $('q').value = q;
+  addRecent(q);
+  view.innerHTML = `<h2>Searching “${esc(q)}”…</h2>` + skeletonGrid(10);
+  try {
+    const items = await api('/api/search?q=' + encodeURIComponent(q));
+    if (!items.length) { view.innerHTML = '<div class="msg">No results.</div>'; return; }
+    view.innerHTML = `<h2>${items.length} results for “${esc(q)}”</h2><div class="grid">` + items.map((p, i) => `
+      <div class="glass card prod" style="animation-delay:${Math.min(i, 20) * 18}ms" onclick="go('p','${esc(p.path)}')">
+        <div class="imgbox"><img class="main" src="${esc(p.image)}" loading="lazy" alt=""></div>
+        <div class="name" title="${esc(p.name)}">${esc(p.name)}</div>
+        <div class="row"><img class="site" src="${esc(p.site_image)}" alt="">
+          <span class="price">${inr(p.price)}${p.mrp > p.price ? `<span class="mrp">${inr(p.mrp)}</span><span class="off">${Math.round((1 - p.price / p.mrp) * 100)}% off</span>` : ''}</span></div>
+        ${p.rating ? `<div class="mute">★ ${p.rating} (${Number(p.rating_count || 0).toLocaleString('en-IN')})</div>` : ''}
+      </div>`).join('') + '</div>';
+  } catch (e) { view.innerHTML = `<div class="msg">${esc(e.message)}</div>`; }
+}
+
+// ---- product page
+async function showProduct(q) {
+  view.innerHTML = `<div class="glass card detail"><div class="skel" style="height:260px;border-radius:12px"></div>
+    <div><div class="skel" style="height:14px;width:30%"></div><div class="skel" style="height:22px;width:85%;margin-top:12px"></div>
+    <div class="skel" style="height:28px;width:25%;margin-top:14px"></div><div class="skel" style="height:64px;margin-top:16px"></div></div></div>
+    <div class="glass card section"><div class="skel" style="height:220px"></div></div>`;
+  try {
+    const p = current = await api('/api/product?' + new URLSearchParams(q));
+    const s = p.stats || {};
+    let verdict = '';
+    if (s.min && s.avg && p.price) {
+      if (p.price <= s.min) verdict = `<div class="verdict good">Lowest price ever tracked — good time to buy</div>`;
+      else if (p.price < s.avg) verdict = `<div class="verdict good">Below average price (avg ${inr(s.avg)})</div>`;
+      else verdict = `<div class="verdict bad">Above average — it has been ${inr(s.min)} before</div>`;
+    }
+    view.innerHTML = `
+      <div class="glass card detail" style="animation:rise .35s ease both">
+        <div class="imgbox"><img class="hero" src="${esc(p.image)}" alt=""></div>
+        <div>
+          <div class="row"><img class="site" src="${esc(p.site_logo)}" alt=""><span class="mute">${esc(p.site)}${p.in_stock === false || p.in_stock === 0 ? ' · Out of stock' : ''}</span></div>
+          <h2 style="margin-top:8px">${esc(p.name)}</h2>
+          <div class="price" style="font-size:24px">${inr(p.price)}${p.mrp > p.price ? `<span class="mrp">${inr(p.mrp)}</span><span class="off">${Math.round((1 - p.price / p.mrp) * 100)}% off</span>` : ''}</div>
+          ${verdict}
+          <div class="stats">
+            <div class="stat"><span class="mute">Lowest</span><b>${inr(s.min)}</b></div>
+            <div class="stat"><span class="mute">Average</span><b>${inr(s.avg)}</b></div>
+            <div class="stat"><span class="mute">Highest</span><b>${inr(s.maxall)}</b></div>
+            <div class="stat"><span class="mute">Lowest (6 mo)</span><b>${inr(s.min6)}</b></div>
+          </div>
+          <div class="row" style="flex-wrap:wrap">
+            <a href="${esc(p.link)}" target="_blank" rel="noopener"><button class="ghost">View on ${esc(p.site)}</button></a>
+            <input id="target" type="number" style="width:140px" placeholder="Target ₹" value="${Math.round((s.min || p.price * .9))}">
+            <button class="ghost" onclick="setAlert()">Set price alert</button>
+            <span class="mute" id="alertMsg"></span>
+          </div>
+        </div>
+      </div>
+      <div class="glass card section"><h3>Price history</h3>${chart(p.history, p.price)}</div>
+      ${p.compare.length ? `<div class="glass card section"><h3>Prices on other stores</h3><div class="table-wrap"><table>
+        <tr><th></th><th>Store</th><th>Product</th><th>Price</th><th></th></tr>
+        ${p.compare.map(c => `<tr><td><img class="site" src="${esc(c.site_image)}" alt=""></td><td>${esc(c.site)}</td>
+          <td class="mute">${esc(c.name)}</td><td><b>${inr(c.price)}</b></td>
+          <td><a href="${esc(c.link)}" target="_blank" rel="noopener">Open</a></td></tr>`).join('')}
+      </table></div></div>` : ''}
+      ${p.coupons.length ? `<div class="glass card section"><h3>Coupons for ${esc(p.site)}</h3>
+        ${p.coupons.slice(0, 20).map(c => `<span class="coupon" title="${esc(c.desc)}"><code>${esc(c.code)}</code><span>${esc(c.title)}</span>
+          <button class="ghost" style="padding:2px 8px" onclick="navigator.clipboard.writeText('${esc(c.code)}');this.textContent='Copied'">Copy</button></span>`).join('')}</div>` : ''}`;
+  } catch (e) { view.innerHTML = `<div class="msg">${esc(e.message)}</div>`; }
+}
+
+// step chart from [{from,to,price}] segments
+function chart(hist, now) {
+  if (!hist || !hist.length) return '<div class="mute">No history yet.</div>';
+  const pts = [];
+  hist.forEach(h => { pts.push([new Date(h.from.replace(' ', 'T')), h.price]); pts.push([new Date(h.to.replace(' ', 'T')), h.price]); });
+  pts.push([new Date(), now ?? hist[hist.length - 1].price]);
+  const W = 1000, H = 260, L = 70, R = 30, T = 10, B = 30;
+  const xs = pts.map(p => +p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys); const pad = (y1 - y0) * .1 || y1 * .05; y0 -= pad; y1 += pad;
+  const X = t => L + (t - x0) / ((x1 - x0) || 1) * (W - L - R), Y = v => T + (1 - (v - y0) / ((y1 - y0) || 1)) * (H - T - B);
+  let d = '';
+  pts.forEach((p, i) => { d += (i ? `H${X(+p[0])}V${Y(p[1])}` : `M${X(+p[0])},${Y(p[1])}`); });
+  const area = `${d}V${H - B}H${X(+pts[0][0])}Z`;
+  const ticks = [0, .5, 1].map(f => y0 + (y1 - y0) * f);
+  const dates = [0, .25, .5, .75, 1].map(f => x0 + (x1 - x0) * f);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%">
+    <defs><linearGradient id="hkfill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:var(--acc);stop-opacity:.28"/><stop offset="1" style="stop-color:var(--acc);stop-opacity:0"/></linearGradient></defs>
+    ${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--line)"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end">${inr(v)}</text>`).join('')}
+    ${dates.map(t => `<text x="${X(t)}" y="${H - 8}" text-anchor="middle">${new Date(t).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'})}</text>`).join('')}
+    <path d="${area}" fill="url(#hkfill)"/>
+    <path d="${d}" fill="none" style="stroke:var(--acc)" stroke-width="2.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ---- alerts
+async function setAlert() {
+  const target = Number($('target').value);
+  if (!target || target <= 0) { $('alertMsg').textContent = 'Enter a target price'; return; }
+  if (target >= current.price) { $('alertMsg').textContent = 'Target must be below the current price'; return; }
+  try {
+    await api('/api/alerts', {body: {product: current, target_price: target}}, setAlert);
+    $('alertMsg').textContent = `✓ Alert set — Buyhatke will notify you below ${inr(target)}`;
+  } catch (e) { if (e.message !== 'login_required') $('alertMsg').textContent = e.message; }
+}
+
+async function showAlerts() {
+  view.innerHTML = '<div class="msg">Loading alerts…</div>';
+  try {
+    const list = await api('/api/alerts', {}, showAlerts);
+    if (!list.length) { view.innerHTML = '<div class="msg">No price alerts yet. Open a product and set one.</div>'; return; }
+    view.innerHTML = `<h2>My price alerts</h2><div class="glass card"><div class="table-wrap"><table>
+      <tr><th></th><th>Product</th><th>Current</th><th>Target</th><th></th></tr>
+      ${list.map(a => {
+        const id = a.entry_id ?? a.link_id ?? a.id;
+        const name = a.prod || a.name || a.product_name || `Product ${a.pid}`;
+        return `<tr>
+          <td>${a.image ? `<div class="imgbox" style="width:48px;height:48px;padding:3px"><img src="${esc(a.image)}" style="max-width:100%;max-height:100%;object-fit:contain" alt=""></div>` : ''}</td>
+          <td>${a.url || a.link ? `<a href="#u:${encodeURIComponent(a.url || a.link)}">${esc(name)}</a>` : esc(name)}</td>
+          <td>${inr(a.cur_price ?? a.price)}</td>
+          <td><input type="number" style="width:110px" value="${esc(a.target_price ?? a.price_set ?? a.price_not)}" id="t_${esc(id)}"></td>
+          <td><div class="row"><button class="ghost" onclick="updAlert('${esc(id)}')">Update</button>
+              <button class="ghost" onclick="rmAlert('${esc(id)}')">Remove</button></div></td></tr>`;
+      }).join('')}</table></div></div>`;
+  } catch (e) { if (e.message !== 'login_required') view.innerHTML = `<div class="msg">${esc(e.message)}</div>`;
+               else view.innerHTML = '<div class="msg">Log in to see your price alerts.</div>'; }
+}
+async function updAlert(id) {
+  try { await api('/api/alerts/update', {body: {alert_id: id, target_price: Number($('t_' + id).value)}}); showAlerts(); }
+  catch (e) { if (e.message !== 'login_required') alert(e.message); }
+}
+async function rmAlert(id) {
+  if (!confirm('Remove this alert?')) return;
+  try { await api('/api/alerts/remove', {body: {alert_id: id}}); showAlerts(); }
+  catch (e) { if (e.message !== 'login_required') alert(e.message); }
+}
+
+// ---- login
+function showStep(s) { $('stepEmail').style.display = s === 'email' ? '' : 'none'; $('stepOtp').style.display = s === 'otp' ? '' : 'none'; $('loginErr').textContent = ''; }
+function openLogin(retry) { afterLogin = retry || null; showStep('email'); $('loginModal').classList.add('open'); setTimeout(() => $('email').focus(), 50); }
+function closeLogin() { $('loginModal').classList.remove('open'); }
+$('loginModal').addEventListener('click', e => { if (e.target === $('loginModal')) closeLogin(); });
+async function sendOtp() {
+  const email = $('email').value.trim();
+  if (!/^\S+@\S+\.\S+$/.test(email)) { $('loginErr').textContent = 'Enter a valid email'; return; }
+  $('sendBtn').disabled = true;
+  try {
+    const r = await api('/api/login/send-otp', {body: {email}});
+    if (r && r.status === 0) throw new Error(r.err || r.msg || 'Could not send OTP');
+    showStep('otp'); $('otp').focus();
+  } catch (e) { $('loginErr').textContent = e.message; }
+  $('sendBtn').disabled = false;
+}
+async function verifyOtp() {
+  $('verifyBtn').disabled = true;
+  try {
+    const r = await api('/api/login/verify-otp', {body: {otp: $('otp').value.trim()}});
+    if (!r.status.logged_in) throw new Error((r.result && (r.result.err || r.result.msg)) || 'Wrong or expired OTP');
+    setMe(r.status); closeLogin();
+    const fn = afterLogin; afterLogin = null; if (fn) fn();
+  } catch (e) { $('loginErr').textContent = e.message; }
+  $('verifyBtn').disabled = false;
+}
+function setMe(s) {
+  me = s;
+  $('authBtn').innerHTML = s.logged_in ? `Buyhatke ✓<span class="full">${s.email ? ' (' + esc(s.email) + ')' : ''}</span>` : 'Buyhatke';
+  $('authBtn').title = s.logged_in ? 'Log out of Buyhatke (price alerts)' : 'Log in to Buyhatke (only needed for price alerts)';
+}
+async function authClick() {
+  if (!me.logged_in) return openLogin();
+  await api('/api/logout', {body: {}}); setMe({logged_in: false}); route();
+}
+$('otp').addEventListener('keydown', e => { if (e.key === 'Enter') verifyOtp(); });
+$('email').addEventListener('keydown', e => { if (e.key === 'Enter') sendOtp(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('loginModal').classList.contains('open')) closeLogin(); });
+
+api('/api/login/status').then(setMe).catch(() => {});
+route();
+</script>
+<script src="/static/shop.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in · Royal Trading Company</title>
+<script>
+  (function () {
+    let t = null; try { t = localStorage.getItem('hk_theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+  :root, :root[data-theme="dark"] { color-scheme: dark; --bg:#000; --card:#0a0a0a; --ink:#f5f5f5; --mute:#8a8a8a; --line:#1f1f1f; --field:#0f0f0f; --acc:#d4af37; --acc-ink:#000; --bad:#ff6b6b; }
+  :root[data-theme="light"] { color-scheme: light; --bg:#fff; --card:#fff; --ink:#0a0a0a; --mute:#6b6b6b; --line:#e8e8e8; --field:#fafafa; --acc:#0a0a0a; --acc-ink:#fff; --bad:#d32f2f; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--ink);
+    font:15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; padding:20px; }
+  .box { width:min(380px, 100%); }
+  .mark { width:44px; height:44px; border:1.5px solid var(--acc); color:var(--acc); display:grid; place-items:center;
+    font-weight:800; letter-spacing:.04em; font-size:14px; margin-bottom:22px; }
+  h1 { font-size:13px; letter-spacing:.32em; font-weight:700; margin:0 0 4px; }
+  p.sub { margin:0 0 32px; color:var(--mute); font-size:13px; }
+  label { display:block; font-size:12px; color:var(--mute); margin:0 0 6px; letter-spacing:.04em; }
+  input { width:100%; padding:13px 14px; font:inherit; color:var(--ink); background:var(--field); border:1px solid var(--line);
+    border-radius:10px; outline:none; margin-bottom:16px; transition:border-color .15s; }
+  input:focus { border-color:var(--acc); }
+  .pw { position:relative; } .pw button { position:absolute; right:8px; top:8px; background:none; border:0; color:var(--mute);
+    font:inherit; font-size:12px; padding:6px 8px; cursor:pointer; }
+  button.go { width:100%; padding:13px; border:0; border-radius:10px; background:var(--acc); color:var(--acc-ink);
+    font:inherit; font-weight:700; letter-spacing:.06em; cursor:pointer; margin-top:6px; }
+  button.go:disabled { opacity:.5; cursor:default; }
+  .err { color:var(--bad); font-size:13px; min-height:20px; margin-top:12px; }
+  .foot { margin-top:40px; display:flex; justify-content:space-between; color:var(--mute); font-size:12px; }
+  .foot button { background:none; border:0; color:var(--mute); font:inherit; cursor:pointer; padding:0; text-decoration:underline; }
+</style>
+</head>
+<body>
+<form class="box" id="f" autocomplete="on">
+  <div class="mark">RTC</div>
+  <h1>ROYAL TRADING COMPANY</h1>
+  <p class="sub">Staff sign-in</p>
+  <label for="u">User ID</label>
+  <input id="u" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+  <label for="p">Password</label>
+  <div class="pw"><input id="p" name="password" type="password" autocomplete="current-password" required>
+    <button type="button" id="show" aria-label="Show password">Show</button></div>
+  <button class="go" id="go" type="submit">Sign in</button>
+  <div class="err" id="err" role="alert"></div>
+  <div class="foot"><span>Private system · authorised staff only</span><button type="button" id="th">Theme</button></div>
+</form>
+<script>
+  const $ = id => document.getElementById(id);
+  $('show').onclick = () => { const p = $('p'); p.type = p.type === 'password' ? 'text' : 'password'; $('show').textContent = p.type === 'password' ? 'Show' : 'Hide'; };
+  $('th').onclick = () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t; try { localStorage.setItem('hk_theme', t); } catch (e) {} };
+  $('f').onsubmit = async e => {
+    e.preventDefault(); $('err').textContent = ''; $('go').disabled = true; $('go').textContent = 'Signing in…';
+    try {
+      const r = await fetch('/api/auth/login', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: $('u').value.trim(), password: $('p').value})});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.detail || 'Sign-in failed');
+      location.replace('/' + (location.hash || ''));
+    } catch (ex) { $('err').textContent = ex.message; $('p').value = ''; $('p').focus(); }
+    $('go').disabled = false; $('go').textContent = 'Sign in';
+  };
+  $('u').focus();
+</script>
+</body>
+</html>

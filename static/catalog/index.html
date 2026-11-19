@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royal Trading Company</title>
+<meta name="description" content="Genuine products at prices that beat Amazon.">
+<script src="/assets/theme.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><span class="mark">RTC</span><span class="name">ROYAL TRADING COMPANY</span></div>
+    <div class="actions">
+      <button class="icon" id="themeBtn" aria-label="Switch theme" title="Switch theme"></button>
+      <button class="cartbtn" id="cartBtn" aria-label="Open cart">Cart <span class="count" id="count">0</span></button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <h1 id="tagline">Genuine products. Prices that beat Amazon.</h1>
+  <p class="muted">Pick what you like, send us a request, and we'll get your bill ready.</p>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Search products" autocomplete="off">
+    <select id="cat"><option value="">All categories</option></select>
+  </div>
+</section>
+
+<main id="grid" class="grid" aria-live="polite"></main>
+<p class="empty" id="empty" hidden>No products found.</p>
+
+<footer>
+  <div id="contact"></div>
+  <button class="link" id="trackBtn">Track a request</button>
+</footer>
+
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="sheet">
+    <div class="sheet-head"><h2>Your cart</h2><button class="icon close" id="closeCart" aria-label="Close">✕</button></div>
+    <div id="cartBody"></div>
+  </div>
+</aside>
+
+<div class="modal" id="modal" aria-hidden="true"><div class="sheet small" id="modalBody"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="/assets/app.js"></script>
+</body>
+</html>

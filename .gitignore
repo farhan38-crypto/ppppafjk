@@ -1,0 +1,10 @@
+session.json
+.venv/
+__pycache__/
+shop.db
+shop.db-journal
+catalog.db
+catalog.db-journal
+catalog_images/
+backups/
+CREDENTIALS.txt
